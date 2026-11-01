@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "Usuario": {
+      "title": "Usuario",
+      "description": "Perfil de usuário do sistema para controle de acesso por função (portaria ou direção)",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "E-mail de autenticação do usuário"
+        },
+        "nome": {
+          "type": "string",
+          "description": "Nome completo do usuário"
+        },
+        "perfil": {
+          "type": "string",
+          "enum": ["portaria", "direção"],
+          "description": "Perfil de acesso: 'portaria' para porteiro/vigia, 'direção' para monitoramento e gestão"
+        },
+        "ativo": {
+          "type": "boolean",
+          "description": "Indica se a conta está ativa no sistema"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data e hora de criação do perfil"
+        }
+      },
+      "required": ["email", "nome", "perfil", "ativo"]
+    }
+  },
+  "firestore": {
+    "/usuarios/{userId}": {
+      "schema": "Usuario",
+      "description": "Coleção de usuários para validação de perfis 'portaria' e 'direção'"
+    }
+  }
+}
