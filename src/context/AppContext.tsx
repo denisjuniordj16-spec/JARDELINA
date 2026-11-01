@@ -757,7 +757,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registeredBy: 'Vigia Portão 01',
         gate: 'Portão Principal',
         notes: defaultNote,
-        needsDelayReason: isAfter18,
+        needsDelayReason: isLate && type === 'ENTRADA',
       };
 
       if (soundEffectsEnabled) {
@@ -826,7 +826,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTimeRecords((prev) => [newRecord, ...prev]);
       setLastRegisteredRecord(newRecord);
 
-      if (isAfter18 && type === 'ENTRADA') {
+      // Prompt delay reason modal in the portaria immediately as soon as employee arrives late
+      if (isLate && type === 'ENTRADA') {
         setPendingReasonRecord(newRecord);
       }
 

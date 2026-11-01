@@ -10,6 +10,12 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
 
+export const isAuthorizedAdminEmail = (email?: string | null): boolean => {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return clean === 'denis.junior.dj16@gmail.vom' || clean === 'denis.junior.dj16@gmail.com';
+};
+
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
@@ -18,6 +24,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   isPortaria: boolean;
   isDirecao: boolean;
+  isAdmin: boolean;
   canAccessGuard: boolean;
   canAccessManagement: boolean;
   loginWithCredentials: (email: string, pass: string) => Promise<{ success: boolean; perfil?: UserRole; error?: string }>;
@@ -31,7 +38,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Preset accounts for frictionless testing and role verification
 export const PRESET_ACCOUNTS = {
   admin: {
-    email: 'denis.junior.dj16@gmail.com',
+    email: 'denis.junior.dj16@gmail.vom',
+    alternateEmail: 'denis.junior.dj16@gmail.com',
     password: 'borborema2107',
     nome: 'Denis Junior (Administrador & Direção)',
     perfil: 'direção' as UserRole,
@@ -61,18 +69,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const userRef = doc(db, 'usuarios', firebaseUser.uid);
       const userSnap = await getDoc(userRef);
+      const emailLower = (firebaseUser.email || '').toLowerCase();
+      const isAdminUser = isAuthorizedAdminEmail(emailLower);
 
       if (userSnap.exists()) {
         const data = userSnap.data();
         let role = (data.perfil === 'portaria' || data.perfil === 'direção' ? data.perfil : 'portaria') as UserRole;
-        const emailLower = (firebaseUser.email || '').toLowerCase();
-        if (emailLower === 'denis.junior.dj16@gmail.com' || emailLower.includes('denis')) {
+        if (isAdminUser) {
           role = 'direção';
         }
         const profile: UserProfile = {
           uid: firebaseUser.uid,
           email: data.email || firebaseUser.email || '',
-          nome: data.nome || (emailLower.includes('denis') ? 'Denis Junior' : 'Usuário'),
+          nome: data.nome || (isAdminUser ? 'Denis Junior (Administrador)' : 'Usuário'),
           perfil: role,
           ativo: data.ativo ?? true,
           createdAt: data.createdAt,
@@ -84,8 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let initialRole: UserRole = fallbackRole || 'portaria';
       let initialName = 'Porteiro em Serviço';
 
-      const emailLower = (firebaseUser.email || '').toLowerCase();
-      if (emailLower === 'denis.junior.dj16@gmail.com' || emailLower.includes('denis')) {
+      if (isAdminUser) {
         initialRole = 'direção';
         initialName = 'Denis Junior (Administrador)';
       } else if (emailLower.includes('direcao') || emailLower.includes('gestao') || emailLower.includes('admin')) {
@@ -154,22 +162,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoginError(null);
 
     const cleanEmail = email.trim().toLowerCase();
+    const firebaseAuthEmail = cleanEmail.endsWith('@gmail.vom')
+      ? cleanEmail.replace('@gmail.vom', '@gmail.com')
+      : cleanEmail;
 
     try {
       let userCredential;
       try {
-        userCredential = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+        userCredential = await signInWithEmailAndPassword(auth, firebaseAuthEmail, pass);
       } catch (signInErr: any) {
-        // If user doesn't exist, auto-register known preset accounts (including denis.junior.dj16@gmail.com)
+        // If user doesn't exist, auto-register known preset accounts (including denis.junior.dj16@gmail.vom / .com)
+        const isAdminPreset = isAuthorizedAdminEmail(cleanEmail);
         const isPreset =
-          cleanEmail === PRESET_ACCOUNTS.admin.email ||
+          isAdminPreset ||
           cleanEmail === PRESET_ACCOUNTS.portaria.email ||
           cleanEmail === PRESET_ACCOUNTS.direcao.email;
 
         if (isPreset && (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential')) {
           const role: UserRole = cleanEmail === PRESET_ACCOUNTS.portaria.email ? 'portaria' : 'direção';
-          userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+          userCredential = await createUserWithEmailAndPassword(auth, firebaseAuthEmail, pass);
           const profile = await fetchOrCreateUserProfile(userCredential.user, role);
+          if (profile && cleanEmail.includes('.vom')) {
+            profile.email = cleanEmail;
+          }
           setUser(userCredential.user);
           setUserProfile(profile);
           setLoading(false);
@@ -182,6 +197,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const profile = await fetchOrCreateUserProfile(userCredential.user);
       if (!profile || !profile.ativo) {
         throw new Error('Conta desativada ou não autorizada pelo administrador.');
+      }
+
+      if (profile && cleanEmail.includes('.vom')) {
+        profile.email = cleanEmail;
       }
 
       setUser(userCredential.user);
@@ -231,6 +250,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isPortaria = userProfile?.perfil === 'portaria';
   const isDirecao = userProfile?.perfil === 'direção';
   const isLoggedIn = !!userProfile;
+  const isAdmin = isLoggedIn && isAuthorizedAdminEmail(userProfile?.email || user?.email);
+  // Permit access to the administration layout ONLY if the logged in user is denis.junior.dj16@gmail.vom (or .com)
+  const canAccessManagement = isAdmin;
 
   const value: AuthContextType = {
     user,
@@ -240,8 +262,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isLoggedIn,
     isPortaria,
     isDirecao,
+    isAdmin,
     canAccessGuard: isPortaria || isDirecao,
-    canAccessManagement: isDirecao,
+    canAccessManagement,
     loginWithCredentials,
     quickLogin,
     logout,

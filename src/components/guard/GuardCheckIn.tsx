@@ -18,17 +18,21 @@ import {
   Briefcase,
   Users,
   Building2,
+  Pencil,
+  X,
+  MessageSquare,
 } from 'lucide-react';
 import { CompanyEmblem } from '../common/CompanyEmblem';
 
 const COMMON_DELAY_REASONS = [
-  'Trânsito Intenso / Acidente na Rodovia',
-  'Problemas no Transporte Público / Ônibus Quebrado',
-  'Consulta Médica / Atestado / Exames',
-  'Emergência Familiar / Pessoal',
-  'Chuva Torrencial / Alagamento',
-  'Convocação Extraordinária da Empresa',
-  'Problema Mecânico com Veículo Próprio',
+  { label: 'Trânsito Intenso / Engarrafamento', icon: '🚗' },
+  { label: 'Problemas no Transporte Público / Ônibus Quebrado', icon: '🚌' },
+  { label: 'Consulta Médica / Atestado / Exames', icon: '🏥' },
+  { label: 'Emergência Familiar / Pessoal', icon: '👨‍👩‍👧' },
+  { label: 'Chuva Torrencial / Alagamento', icon: '🌧️' },
+  { label: 'Problema Mecânico com Veículo Próprio', icon: '🔧' },
+  { label: 'Convocação Extraordinária da Empresa', icon: '🏢' },
+  { label: 'Outro Motivo (descrever abaixo)', icon: '📝' },
 ];
 
 export const GuardCheckIn: React.FC = () => {
@@ -134,10 +138,11 @@ export const GuardCheckIn: React.FC = () => {
       setRecentlyPunchedId(null);
     }, 2500);
 
-    // If arrival is late or after 18:00, the pendingReasonRecord is opened automatically in AppContext
+    // As soon as the employee arrives late, open the delay reason registration flow immediately
     if (record?.needsDelayReason) {
       setSelectedPresetReason('');
       setCustomReasonText('');
+      setPendingReasonRecord(record);
     }
   };
 
@@ -163,6 +168,13 @@ export const GuardCheckIn: React.FC = () => {
       : customReasonText || 'Não informado pelo colaborador';
 
     registerDelayReason(pendingReasonRecord.id, finalReason);
+    setSelectedPresetReason('');
+    setCustomReasonText('');
+  };
+
+  // Dismiss without recording reason
+  const handleDismissReason = () => {
+    setPendingReasonRecord(null);
     setSelectedPresetReason('');
     setCustomReasonText('');
   };
@@ -301,89 +313,7 @@ export const GuardCheckIn: React.FC = () => {
         </div>
       </div>
 
-      {/* POST-PUNCH REASON MODAL / PROMPT (Triggered AFTER punch if arriving after 18:00) */}
-      {pendingReasonRecord && (
-        <div className="p-5 rounded-2xl border-2 border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-slate-900 dark:text-white shadow-lg animate-in fade-in zoom-in-95">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2.5 bg-rose-600 text-white rounded-xl">
-                <FileQuestion className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-xs uppercase font-extrabold tracking-wider text-rose-700 dark:text-rose-400">
-                  Entrada Batida com Sucesso · Chegada Após as 18:00
-                </span>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Perguntar ao Colaborador o Motivo do Atraso
-                </h2>
-              </div>
-            </div>
 
-            <span className="font-mono text-xs px-2.5 py-1 bg-rose-200 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200 font-bold rounded-lg">
-              Batido às {pendingReasonRecord.timeFormatted}
-            </span>
-          </div>
-
-          <p className="text-xs text-slate-700 dark:text-slate-300 mb-3">
-            O ponto de <strong>{pendingReasonRecord.employeeName}</strong> ({pendingReasonRecord.department}) já foi registrado no sistema. Conforme a norma da empresa, pergunte agora o motivo do atraso e selecione ou digite a opção correspondente:
-          </p>
-
-          <form onSubmit={handleSubmitReason} className="space-y-3">
-            {/* Quick preset reason buttons */}
-            <div>
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">
-                Selecione o motivo relatado:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {COMMON_DELAY_REASONS.map((reason) => (
-                  <button
-                    key={reason}
-                    type="button"
-                    onClick={() => setSelectedPresetReason(reason)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
-                      selectedPresetReason === reason
-                        ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    {reason}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom note */}
-            <div>
-              <input
-                type="text"
-                value={customReasonText}
-                onChange={(e) => setCustomReasonText(e.target.value)}
-                placeholder="Detalhes adicionais relatados pelo funcionário (opcional)..."
-                className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500"
-              />
-            </div>
-
-            {/* Submit reason */}
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => registerDelayReason(pendingReasonRecord.id, 'Colaborador não justificou motivo do atraso')}
-                className="px-3.5 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg"
-              >
-                Registrar Sem Justificativa
-              </button>
-              <button
-                type="submit"
-                disabled={!selectedPresetReason && !customReasonText.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Confirmar Motivo e Enviar à Direção</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Real-time Last Punch Flash Banner */}
       {lastRegisteredRecord && !pendingReasonRecord && (
@@ -640,9 +570,47 @@ export const GuardCheckIn: React.FC = () => {
                           {lastRecord.timeFormatted}
                         </span>
                       </div>
-                      {lastRecord.delayReason && (
-                        <div className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">
-                          Motivo: {lastRecord.delayReason}
+
+                      {/* Late Arrival Badge & Reason Options */}
+                      {(lastRecord.punctuality === 'LATE_MILD' || lastRecord.punctuality === 'LATE_CRITICAL' || lastRecord.diffMinutes > 0) && (
+                        <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                          <div className="flex items-center justify-between gap-1 mb-1.5">
+                            <span className="inline-flex items-center gap-1 font-bold text-[11px] text-amber-600 dark:text-amber-400">
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              <span>Atraso (+{Math.max(1, lastRecord.diffMinutes)} min)</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPendingReasonRecord(lastRecord);
+                                setSelectedPresetReason('');
+                                setCustomReasonText(lastRecord.delayReason || '');
+                              }}
+                              className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 flex items-center gap-1 hover:underline"
+                            >
+                              <Pencil className="w-2.5 h-2.5" />
+                              <span>{lastRecord.delayReason ? 'Editar Motivo' : '+ Adicionar Motivo'}</span>
+                            </button>
+                          </div>
+                          {lastRecord.delayReason ? (
+                            <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-lg p-1.5 break-words">
+                              <span className="font-bold text-amber-800 dark:text-amber-300">Motivo: </span>
+                              {lastRecord.delayReason}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPendingReasonRecord(lastRecord);
+                                setSelectedPresetReason('');
+                                setCustomReasonText('');
+                              }}
+                              className="w-full py-1 px-2 text-[11px] font-bold text-amber-800 dark:text-amber-200 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950 dark:hover:bg-amber-900 rounded-lg border border-amber-300 dark:border-amber-800 flex items-center justify-center gap-1 transition-colors"
+                            >
+                              <FileQuestion className="w-3.5 h-3.5" />
+                              <span>Adicionar Motivo do Atraso</span>
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -726,6 +694,124 @@ export const GuardCheckIn: React.FC = () => {
                 <span>Sim, Zerar Entradas</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELAY REASON MODAL (POPS UP IMMEDIATELY AS SOON AS EMPLOYEE ARRIVES LATE) */}
+      {pendingReasonRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 animate-in zoom-in-95 space-y-4">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="p-3 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 shrink-0">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Atraso na Entrada do Colaborador</span>
+                    <span className="px-2 py-0.5 text-xs font-mono font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                      +{Math.max(1, pendingReasonRecord.diffMinutes)} min
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Selecione ou digite a justificativa relatada pelo funcionário na portaria:
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDismissReason}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Fechar sem salvar justificativa"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Employee Summary Card */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between text-xs">
+              <div>
+                <span className="font-bold text-slate-900 dark:text-white block text-sm">
+                  {pendingReasonRecord.employeeName}
+                </span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  {pendingReasonRecord.department} · {pendingReasonRecord.employeeRole} (Crachá: {pendingReasonRecord.badgeNumber})
+                </span>
+              </div>
+              <div className="text-right font-mono">
+                <span className="text-[11px] text-slate-400 block">Horário Entrada:</span>
+                <span className="font-bold text-slate-900 dark:text-white text-sm">
+                  {pendingReasonRecord.timeFormatted}
+                </span>
+                <span className="text-[10px] text-slate-400 block">
+                  (Turno das {pendingReasonRecord.expectedTime || '06:00'})
+                </span>
+              </div>
+            </div>
+
+            {/* Reason Form */}
+            <form onSubmit={handleSubmitReason} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  Motivo Informado pelo Colaborador (Clique para Selecionar):
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {COMMON_DELAY_REASONS.map((item) => {
+                    const isSelected = selectedPresetReason === item.label;
+                    return (
+                      <button
+                        type="button"
+                        key={item.label}
+                        onClick={() => setSelectedPresetReason(isSelected ? '' : item.label)}
+                        className={`text-left p-2.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-2 ${
+                          isSelected
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500/20 font-bold shadow-xs'
+                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200'
+                        }`}
+                      >
+                        <span className="text-base shrink-0">{item.icon}</span>
+                        <span className="truncate flex-1">{item.label}</span>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom or details input */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Detalhes / Justificativa Complementar:
+                </label>
+                <textarea
+                  value={customReasonText}
+                  onChange={(e) => setCustomReasonText(e.target.value)}
+                  placeholder="Ex: Veículo quebrou na rodovia, linha de ônibus atrasou 30 minutos, etc..."
+                  rows={2}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleDismissReason}
+                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Pular / Registrar sem Motivo Agora
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md transition-all active:scale-[0.98]"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Salvar Motivo do Atraso</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

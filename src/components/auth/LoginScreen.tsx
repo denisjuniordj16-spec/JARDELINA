@@ -37,11 +37,18 @@ export const LoginScreen: React.FC = () => {
     setIsSubmitting(false);
 
     if (result.success && result.perfil) {
-      const welcomeName = email.toLowerCase().includes('denis') ? 'Denis Junior' : result.perfil === 'direção' ? 'Direção' : 'Portaria';
+      const cleanEmail = email.trim().toLowerCase();
+      const isAdmin = cleanEmail === 'denis.junior.dj16@gmail.vom' || cleanEmail === 'denis.junior.dj16@gmail.com';
+      const welcomeName = isAdmin ? 'Denis Junior' : result.perfil === 'direção' ? 'Direção' : 'Portaria';
 
       if (destinationPanel === 'management') {
-        setRedirectNotice(`Bem-vindo, ${welcomeName}! Acesso autorizado. Redirecionando para o Monitoramento da Direção...`);
-        setTimeout(() => setActiveTab('management'), 500);
+        if (!isAdmin) {
+          setRedirectNotice(`Bem-vindo, ${welcomeName}! O layout de administração é restrito a denis.junior.dj16@gmail.vom. Redirecionando para a Portaria...`);
+          setTimeout(() => setActiveTab('guard'), 1000);
+        } else {
+          setRedirectNotice(`Bem-vindo, ${welcomeName}! Acesso de administrador autorizado. Redirecionando para o Monitoramento da Direção...`);
+          setTimeout(() => setActiveTab('management'), 500);
+        }
       } else {
         setRedirectNotice(`Bem-vindo, ${welcomeName}! Acesso autorizado. Redirecionando para o Painel da Portaria...`);
         setTimeout(() => setActiveTab('guard'), 500);
@@ -147,7 +154,8 @@ export const LoginScreen: React.FC = () => {
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
-                  type="email"
+                  type="text"
+                  inputMode="email"
                   required
                   autoFocus
                   value={email}

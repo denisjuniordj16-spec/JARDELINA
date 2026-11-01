@@ -12,7 +12,7 @@ import { ShieldAlert, ArrowLeft } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { activeTab, setActiveTab } = useApp();
-  const { isLoggedIn, isPortaria, isDirecao, loading } = useAuth();
+  const { isLoggedIn, isPortaria, isDirecao, canAccessManagement, userProfile, loading } = useAuth();
 
   // If on login tab or unauthenticated (except for the open public communication area)
   if (activeTab === 'login') {
@@ -34,21 +34,26 @@ const MainContent: React.FC = () => {
     return <LoginScreen />;
   }
 
-  // Role based access enforcement
-  if (isPortaria && (activeTab === 'management' || activeTab === 'split')) {
+  // Administration Layout access restriction: Allowed strictly for denis.junior.dj16@gmail.vom
+  if (!canAccessManagement && (activeTab === 'management' || activeTab === 'split')) {
     return (
       <main className="max-w-md mx-auto px-4 py-16 text-center">
-        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-amber-200 dark:border-amber-900 shadow-xl space-y-4">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-rose-200 dark:border-rose-900 shadow-xl space-y-4">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              Acesso Restrito à Direção
+              Acesso Restrito à Administração
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              O seu perfil atual autenticado no Firestore é <strong>Portaria (Vigia)</strong>. O painel de monitoramento executivo é restrito à Direção.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              O layout de administração e monitoramento da direção é restrito exclusivamente ao e-mail de administrador autorizado: <strong>denis.junior.dj16@gmail.vom</strong>.
             </p>
+            {userProfile?.email && (
+              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-2 bg-slate-100 dark:bg-slate-800 py-1.5 px-3 rounded-lg inline-block">
+                E-mail conectado: {userProfile.email}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -56,7 +61,7 @@ const MainContent: React.FC = () => {
             className="w-full py-2.5 px-4 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Voltar ao Painel da Portaria</span>
+            <span>Ir para Painel da Portaria</span>
           </button>
         </div>
       </main>

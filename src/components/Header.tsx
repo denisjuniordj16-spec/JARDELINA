@@ -35,7 +35,7 @@ export const Header: React.FC = () => {
     setIsCompanyModalOpen,
   } = useApp();
 
-  const { isLoggedIn, userProfile, logout, isPortaria, isDirecao } = useAuth();
+  const { isLoggedIn, userProfile, logout, isPortaria, isDirecao, canAccessManagement } = useAuth();
 
   const handleTabClick = (tabId: ActiveTab) => {
     // Communication is completely open without login
@@ -50,9 +50,9 @@ export const Header: React.FC = () => {
       return;
     }
 
-    // Check role restrictions
-    if (isPortaria && (tabId === 'management' || tabId === 'split')) {
-      alert('Acesso restrito ao perfil de Direção & Monitoramento. O seu perfil atual é Portaria/Vigia.');
+    // Administration layout is restricted strictly to denis.junior.dj16@gmail.vom
+    if (!canAccessManagement && (tabId === 'management' || tabId === 'split')) {
+      alert('Acesso restrito ao layout de administração. Permitido exclusivamente para: denis.junior.dj16@gmail.vom');
       return;
     }
 
@@ -119,7 +119,7 @@ export const Header: React.FC = () => {
             {navItems.map((item) => {
               const isActive = activeTab === item.id;
               const isLocked = item.requiresAuth && !isLoggedIn;
-              const isRestrictedForPortaria = isPortaria && (item.id === 'management' || item.id === 'split');
+              const isRestrictedAdmin = !canAccessManagement && (item.id === 'management' || item.id === 'split');
 
               return (
                 <button
@@ -128,14 +128,14 @@ export const Header: React.FC = () => {
                   title={
                     isLocked
                       ? 'Requer login de operador'
-                      : isRestrictedForPortaria
-                      ? 'Exclusivo para perfil Direção'
+                      : isRestrictedAdmin
+                      ? 'Exclusivo para denis.junior.dj16@gmail.vom'
                       : undefined
                   }
                   className={`flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                     isActive
                       ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
-                      : isLocked || isRestrictedForPortaria
+                      : isLocked || isRestrictedAdmin
                       ? 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
@@ -147,7 +147,7 @@ export const Header: React.FC = () => {
                       Público
                     </span>
                   )}
-                  {isLocked && <Lock className="w-3 h-3 text-slate-400" />}
+                  {(isLocked || isRestrictedAdmin) && <Lock className="w-3 h-3 text-slate-400" />}
                 </button>
               );
             })}
@@ -221,15 +221,11 @@ export const Header: React.FC = () => {
               <span className="hidden md:inline">Empresa</span>
             </button>
 
-            {/* Late arrival alerts bell for Direção */}
-            {(!isLoggedIn || isDirecao) && (
+            {/* Late arrival alerts bell for Administration */}
+            {canAccessManagement && (
               <button
                 onClick={() => {
-                  if (!isLoggedIn) {
-                    setActiveTab('login');
-                  } else {
-                    setActiveTab('management');
-                  }
+                  setActiveTab('management');
                 }}
                 className="relative p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title={
