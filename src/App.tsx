@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
@@ -13,6 +13,40 @@ import { ShieldAlert, ArrowLeft } from 'lucide-react';
 const MainContent: React.FC = () => {
   const { activeTab, setActiveTab } = useApp();
   const { isLoggedIn, isPortaria, isDirecao, canAccessManagement, userProfile, loading } = useAuth();
+
+  // 2. Check token with localStorage.getItem upon loading the system and redirect to panel if it exists
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      if (activeTab === 'login') {
+        const storedEmail = (localStorage.getItem('auth_user_email') || userProfile?.email || '').toLowerCase();
+        const isAdmin =
+          storedEmail === 'denis.junior.dj16@gmail.vom' ||
+          storedEmail === 'denis.junior.dj16@gmail.com' ||
+          storedEmail.includes('denis');
+        setActiveTab(isAdmin ? 'management' : 'guard');
+      }
+    }
+  }, [activeTab, setActiveTab, userProfile]);
+
+  const hasStoredToken = typeof window !== 'undefined' && !!localStorage.getItem('auth_token');
+
+  // Loading state while restoring authenticated session
+  if (loading && hasStoredToken && activeTab !== 'communication') {
+    return (
+      <main className="max-w-md mx-auto px-4 py-24 text-center">
+        <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+          <div className="w-9 h-9 mx-auto rounded-full border-3 border-emerald-500 border-t-transparent animate-spin" />
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            Restaurando Sessão Autenticada...
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Verificando credenciais no Local Storage e redirecionando para o painel.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   // If on login tab or unauthenticated (except for the open public communication area)
   if (activeTab === 'login') {

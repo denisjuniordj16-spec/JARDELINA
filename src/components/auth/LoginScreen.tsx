@@ -26,6 +26,19 @@ export const LoginScreen: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
 
+  // Check token with localStorage.getItem upon loading and redirect to panel if it exists
+  React.useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const storedEmail = (localStorage.getItem('auth_user_email') || '').toLowerCase();
+      const isAdmin =
+        storedEmail === 'denis.junior.dj16@gmail.vom' ||
+        storedEmail === 'denis.junior.dj16@gmail.com' ||
+        storedEmail.includes('denis');
+      setActiveTab(isAdmin ? 'management' : 'guard');
+    }
+  }, [setActiveTab]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;

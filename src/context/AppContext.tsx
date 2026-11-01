@@ -123,8 +123,23 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Navigation
-  const [activeTab, setActiveTab] = useState<ActiveTab>('login');
+  // Navigation - Check token with localStorage.getItem upon loading the system and redirect to the panel if it exists
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        const storedEmail = (localStorage.getItem('auth_user_email') || '').toLowerCase();
+        const isAdmin =
+          storedEmail === 'denis.junior.dj16@gmail.vom' ||
+          storedEmail === 'denis.junior.dj16@gmail.com' ||
+          storedEmail.includes('denis');
+        return isAdmin ? 'management' : 'guard';
+      }
+    } catch {
+      // fallback
+    }
+    return 'login';
+  });
 
   // Dark mode
   const [darkMode, setDarkMode] = useState<boolean>(() => {

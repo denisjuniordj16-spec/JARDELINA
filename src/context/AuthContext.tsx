@@ -16,9 +16,15 @@ export const isAuthorizedAdminEmail = (email?: string | null): boolean => {
   return clean === 'denis.junior.dj16@gmail.vom' || clean === 'denis.junior.dj16@gmail.com';
 };
 
+export const AUTH_STORAGE_KEYS = {
+  TOKEN: 'auth_token',
+  USER_EMAIL: 'auth_user_email',
+};
+
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
+  authToken: string | null;
   loading: boolean;
   loginError: string | null;
   isLoggedIn: boolean;
@@ -61,6 +67,13 @@ export const PRESET_ACCOUNTS = {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('auth_token');
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -142,10 +155,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        try {
+          const token = await currentUser.getIdToken();
+          localStorage.setItem('auth_token', token);
+          if (currentUser.email) {
+            localStorage.setItem('auth_user_email', currentUser.email);
+          }
+          setAuthToken(token);
+        } catch (e) {
+          console.warn('Erro ao obter token do Firebase:', e);
+        }
         const profile = await fetchOrCreateUserProfile(currentUser);
         setUserProfile(profile);
       } else {
-        setUserProfile(null);
+        const storedToken = localStorage.getItem('auth_token');
+        if (!storedToken) {
+          setUserProfile(null);
+          setAuthToken(null);
+        }
       }
       setLoading(false);
     });
@@ -185,6 +212,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (profile && cleanEmail.includes('.vom')) {
             profile.email = cleanEmail;
           }
+
+          // 1. Save authentication token in localStorage after login
+          const token = await userCredential.user.getIdToken();
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('auth_user_email', cleanEmail);
+          setAuthToken(token);
+
           setUser(userCredential.user);
           setUserProfile(profile);
           setLoading(false);
@@ -202,6 +236,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (profile && cleanEmail.includes('.vom')) {
         profile.email = cleanEmail;
       }
+
+      // 1. Save authentication token in localStorage after login
+      const token = await userCredential.user.getIdToken();
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user_email', cleanEmail);
+      setAuthToken(token);
 
       setUser(userCredential.user);
       setUserProfile(profile);
@@ -232,13 +272,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return loginWithCredentials(preset.email, preset.password);
   }, [loginWithCredentials]);
 
-  // Logout
+  // Logout - removes token from localStorage
   const logout = useCallback(async () => {
     try {
       await signOut(auth);
     } catch (err) {
       console.error('Error signing out:', err);
     } finally {
+      // 3. Use localStorage.removeItem on logout
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user_email');
+      setAuthToken(null);
       setUser(null);
       setUserProfile(null);
       setLoginError(null);
@@ -257,6 +301,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const value: AuthContextType = {
     user,
     userProfile,
+    authToken,
     loading,
     loginError,
     isLoggedIn,
